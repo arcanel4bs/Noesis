@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>ASIMOV</title>
+        <title>Noesis | Research Agent Assistant</title>
       </head>
       <body className={spaceGrotesk.className}>{children}</body>
     </html>
