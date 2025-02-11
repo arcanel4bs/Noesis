@@ -27,6 +27,9 @@ lerna-debug.log*
 .pnpm-debug.log*
 pnpm-debug.log*
 
+
+# docs files
+docs
 # log files
 logs
 *.log*

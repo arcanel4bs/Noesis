@@ -234,21 +234,22 @@ const App = () => {
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />,
-                          pre: ({ node, ...props }) => (
+                          // Remove unused node parameters
+                          a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />,
+                          pre: (props) => (
                             <pre {...props} className="bg-[hsl(var(--background))] p-4 rounded-lg overflow-auto" />
                           ),
-                          code: ({ node, inline, ...props }: { node?: any, inline?: boolean } & React.ComponentProps<"code">) =>
+                          code: ({ inline, ...props }: { inline?: boolean } & React.ComponentProps<"code">) =>
                             inline ? (
                               <code {...props} className="bg-[hsl(var(--background))] px-1.5 py-0.5 rounded text-sm" />
                             ) : (
                               <code {...props} />
                             ),
-                          ul: ({ node, ...props }) => <ul {...props} className="list-disc space-y-2 my-4" />,
-                          ol: ({ node, ...props }) => <ol {...props} className="list-decimal space-y-2 my-4" />,
-                          li: ({ node, ...props }) => <li {...props} className="ml-4" />,
-                          p: ({ node, ...props }) => <p {...props} className="my-4" />,
-                          blockquote: ({ node, ...props }) => (
+                          ul: (props) => <ul {...props} className="list-disc space-y-2 my-4" />,
+                          ol: (props) => <ol {...props} className="list-decimal space-y-2 my-4" />,
+                          li: (props) => <li {...props} className="ml-4" />,
+                          p: (props) => <p {...props} className="my-4" />,
+                          blockquote: (props) => (
                             <blockquote
                               {...props}
                               className="border-l-4 border-[hsl(var(--border))] pl-4 italic my-4"
