@@ -12,6 +12,14 @@ const agentModel = new ChatGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
+interface TimelineEvent {
+  type: "agent_start" | "agent_end" | "agent_error";
+  agent: string;
+  timestamp: Date;
+  error?: string;
+}
+
+
 interface AgentState {
   query: string;
   urls: string[];
@@ -21,7 +29,7 @@ interface AgentState {
   iteration_count: number;
   max_iterations: number;
   agent_status: { [agentName: string]: string };
-  timeline_events: any[];
+  timeline_events: TimelineEvent[];
   messages: BaseMessage[];
 }
 
@@ -78,7 +86,7 @@ The JSON object should have two keys: "results" and "visited_urls".
       `data: ${JSON.stringify({ ...updatedState, agent_status: { researcher: "idle" } })}\n\n`
     ));
     return updatedState;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Researcher Agent Error:", error);
     writer.write(new TextEncoder().encode(
       `data: ${JSON.stringify({
@@ -87,7 +95,7 @@ The JSON object should have two keys: "results" and "visited_urls".
           type: "agent_error",
           agent: "researcher",
           timestamp: new Date(),
-          error: error.message,
+          error: (error as Error).message,
         }],
       })}\n\n`
     ));
@@ -98,7 +106,7 @@ The JSON object should have two keys: "results" and "visited_urls".
         type: "agent_error",
         agent: "researcher",
         timestamp: new Date(),
-        error: error.message,
+        error: (error as Error).message,
       }],
     };
   }
@@ -149,7 +157,7 @@ async function writerNode(
     ));
     console.log("SSE Message Sent (writer status):", { agent_status: { writer: "idle" } });
     return updatedState;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Writer Agent Error:", error);
     writer.write(new TextEncoder().encode(
       `data: ${JSON.stringify({
@@ -158,7 +166,7 @@ async function writerNode(
           type: "agent_error",
           agent: "writer",
           timestamp: new Date(),
-          error: error.message,
+          error: (error as Error).message,
         }],
       })}\n\n`
     ));
@@ -169,7 +177,7 @@ async function writerNode(
         type: "agent_error",
         agent: "writer",
         timestamp: new Date(),
-        error: error.message,
+        error: (error as Error).message,
       }],
     };
   }
@@ -189,7 +197,7 @@ export async function POST(req: Request) {
     const writer = transformStream.writable.getWriter();
     const encoder = new TextEncoder();
 
-    const sendEvent = (data: any) => {
+    const sendEvent = (data: unknown) => {
       writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
     };
 
@@ -263,16 +271,16 @@ export async function POST(req: Request) {
         "Content-Encoding": "none",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) { // Changed 'Error' to 'unknown'
     console.error("Error starting research:", error);
     return NextResponse.json(
-      { error: "Failed to start research", details: error.message },
+      { error: "Failed to start research", details: (error as Error).message }, // Type assertion to Error to access message
       { status: 500 }
     );
   }
 }
 
-export async function GET(req: Request) {
+export async function GET() { // Removed 'req: Request'
   console.log("GET request received at /api/start-research for SSE");
   const transformStream = new TransformStream();
   // Return the stream so the client can connect (e.g., via EventSource)

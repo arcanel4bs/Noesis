@@ -33,7 +33,7 @@ const App = () => {
     if (reportRef.current) {
       reportRef.current.scrollTop = reportRef.current.scrollHeight
     }
-  }, [reportRef.current]) // Updated dependency
+  }, []) // Removed reportRef.current from dependency array
 
   // Function to extract URLs from markdown content
   const extractUrls = (markdown: string) => {
@@ -120,9 +120,13 @@ const App = () => {
           })
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) { // Changed type to unknown
       console.error("Error:", error)
-      setReport((prev) => prev + "\n\nError: " + error.message)
+      if (error instanceof Error) {
+        setReport((prev) => prev + "\n\nError: " + error.message)
+      } else {
+        setReport((prev) => prev + "\n\nAn unexpected error occurred.")
+      }
     }
     setLoading(false)
   }
@@ -234,22 +238,21 @@ const App = () => {
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          // Remove unused node parameters
-                          a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />,
-                          pre: (props) => (
+                          a: ({ ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />, // Removed node
+                          pre: ({ ...props }) => (                                                        // Removed node
                             <pre {...props} className="bg-[hsl(var(--background))] p-4 rounded-lg overflow-auto" />
                           ),
-                          code: ({ inline, ...props }: { inline?: boolean } & React.ComponentProps<"code">) =>
+                          code: ({ inline, ...props }: { inline?: boolean } & React.ComponentProps<"code">) => // Removed node and typed props
                             inline ? (
                               <code {...props} className="bg-[hsl(var(--background))] px-1.5 py-0.5 rounded text-sm" />
                             ) : (
                               <code {...props} />
                             ),
-                          ul: (props) => <ul {...props} className="list-disc space-y-2 my-4" />,
-                          ol: (props) => <ol {...props} className="list-decimal space-y-2 my-4" />,
-                          li: (props) => <li {...props} className="ml-4" />,
-                          p: (props) => <p {...props} className="my-4" />,
-                          blockquote: (props) => (
+                          ul: ({ ...props }) => <ul {...props} className="list-disc space-y-2 my-4" />,     // Removed node
+                          ol: ({ ...props }) => <ol {...props} className="list-decimal space-y-2 my-4" />,     // Removed node
+                          li: ({ ...props }) => <li {...props} className="ml-4" />,                         // Removed node
+                          p: ({ ...props }) => <p {...props} className="my-4" />,                           // Removed node
+                          blockquote: ({ ...props }) => (                                                 // Removed node
                             <blockquote
                               {...props}
                               className="border-l-4 border-[hsl(var(--border))] pl-4 italic my-4"
@@ -364,4 +367,3 @@ const App = () => {
 }
 
 export default App
-
