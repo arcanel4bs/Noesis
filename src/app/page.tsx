@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react"
 import SearchForm from "@/components/SearchForm"
-
 import SourcesButton from "@/components/SourcesButton"
 import { AgentAnimation } from "@/components/agent-animation"
 import { ChatWindow } from "@/components/ChatWindow"
 import { Message } from "@/app/types/chat"
 import LeftSideBar from "@/components/leftSideBar"
+import WelcomeCard from "@/components/WelcomeCard"
+import { AnimatePresence, motion } from "framer-motion"
 
 const Page = () => {
   const [messages, setMessages] = useState<Message[]>([])
@@ -143,7 +144,11 @@ const Page = () => {
   }
 
   return (
-    <div className="min-h-screen relative bg-[hsl(var(--background))] flex flex-col items-center">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen relative bg-[hsl(var(--background))] flex flex-col items-center"
+    >
       <div className="absolute left-0 top-0 h-full">
         <LeftSideBar />
       </div>
@@ -155,6 +160,9 @@ const Page = () => {
         />
         
         <main className="mb-4">
+          <AnimatePresence>
+            {messages.length === 0 && <WelcomeCard />}
+          </AnimatePresence>
           <ChatWindow messages={messages} />
           <SearchForm
             query={query}
@@ -166,12 +174,17 @@ const Page = () => {
           />
         </main>
         {loading && (
-          <div className="mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-8"
+          >
             <AgentAnimation activeAgent={activeAgent} />
-          </div>
+          </motion.div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
