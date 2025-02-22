@@ -7,7 +7,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SearchForm from '@/components/SearchForm';
 import SourcesButton from '@/components/SourcesButton';
-import LeftSideBar from '@/components/leftSideBar';
+import LeftSideBar from '@/components/LeftSideBar';
+import { AgentStatus } from "@/app/types/agents";
 
 export default function ResearchPage() {
   const params = useParams();
@@ -16,7 +17,10 @@ export default function ResearchPage() {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [showSources, setShowSources] = useState(false);
-  const [agentStatus, setAgentStatus] = useState({ researcher: 'idle', writer: 'idle' });
+  const [agentStatus, setAgentStatus] = useState<AgentStatus>({
+    researcher: "idle",
+    writer: "idle"
+  });
   const [intermediateUpdates, setIntermediateUpdates] = useState<string[]>([]);
 
   useEffect(() => {
@@ -111,9 +115,9 @@ export default function ResearchPage() {
       </div>
       <div className="max-w-3xl w-full px-4 py-8">
         <SourcesButton 
+          discoveredUrls={session?.urls || []}
           showSources={showSources}
           setShowSources={setShowSources}
-          discoveredUrls={session.urls}
         />
         
         <main className="mb-4">
@@ -134,6 +138,11 @@ export default function ResearchPage() {
           />
         </main>
       </div>
+      {agentStatus.researcher === "working" && <div>Researcher is working...</div>}
+      {agentStatus.writer === "working" && <div>Writer is working...</div>}
+      {intermediateUpdates.map((update, index) => (
+        <div key={index}>{update}</div>
+      ))}
     </div>
   );
 }

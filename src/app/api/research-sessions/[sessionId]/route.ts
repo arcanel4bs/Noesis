@@ -4,38 +4,56 @@ import { supabaseServerClient } from "@/backend/supabaseServerClient";
 
 export async function GET(
   request: Request,
-  context: { params: { sessionId: string } }
+  context: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const sessionId = context.params.sessionId;
-    const { userId } = await auth();
-    if (!userId) {
-      console.error("No userId found in auth context");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const params = await context.params;
+    const sessionId = params.sessionId;
+    
+    if (!sessionId) {
+      return NextResponse.json(
+        { error: "Session ID is required" },
+        { status: 400 }
+      );
     }
 
-    console.log("Fetching session:", sessionId, "for user:", userId);
-    const { data, error } = await supabaseServerClient
-      .from('research_sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .eq('user_id', userId)
+    const { userId } = await auth();
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { data: session, error } = await supabaseServerClient
+      .from("research_sessions")
+      .select("*")
+      .eq("id", sessionId)
+      .eq("user_id", userId)
       .single();
 
     if (error) {
-      console.error("Supabase error:", error);
-      return NextResponse.json({ error: error.message }, { status: 404 });
+      // Handle the specific case of no rows found
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: "Session not found" },
+          { status: 404 }
+        );
+      }
+
+      console.error("Database error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch session" },
+        { status: 500 }
+      );
     }
 
-    if (!data) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
-    }
-
-    return NextResponse.json(data);
+    return NextResponse.json(session);
   } catch (error) {
-    console.error('Error fetching session:', error);
+    console.error("Unexpected error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "An unexpected error occurred" },
       { status: 500 }
     );
   }

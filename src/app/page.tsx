@@ -1,20 +1,21 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import LeftSideBar from "@/components/leftSideBar"
-import { motion } from "framer-motion"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 import SearchForm from "@/components/SearchForm"
+
 import SourcesButton from "@/components/SourcesButton"
+import { AgentAnimation } from "@/components/agent-animation"
+import { ChatWindow } from "@/components/ChatWindow"
+import { Message } from "@/app/types/chat"
+import LeftSideBar from "@/components/LeftSideBar"
 
 const Page = () => {
+  const [messages, setMessages] = useState<Message[]>([])
   const [query, setQuery] = useState("")
-  const [report, setReport] = useState("")
-  const [discoveredUrls, setDiscoveredUrls] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
-  const [hasInteracted, setHasInteracted] = useState(false)
   const [showSources, setShowSources] = useState(false)
+  const [activeAgent, setActiveAgent] = useState(0)
+  const [discoveredUrls, setDiscoveredUrls] = useState<string[]>([])
 
   const extractUrls = (markdown: string) => {
     const urls: string[] = []
@@ -47,16 +48,11 @@ const Page = () => {
           /Research started\. Report will be updated\.Research session started and saved\./g,
           ""
         )
-        setReport((prev) => prev + cleanReport)
-
-        const extractedUrls = extractUrls(cleanReport)
-        if (extractedUrls.length > 0) {
-          setDiscoveredUrls((prev) => [...new Set([...prev, ...extractedUrls])])
-        }
+        setDiscoveredUrls((prev) => [...new Set([...prev, ...extractUrls(cleanReport)])])
       }
       // Update the discovered URLs if they are sent by the backend.
       if (data.visited_urls) {
-        setDiscoveredUrls((prev) => [...new Set([...prev, ...data.visited_urls])])
+        setDiscoveredUrls((prev: string[]) => [...new Set([...prev, ...data.visited_urls])])
       }
       if (data.error) {
         alert(data.error)
@@ -70,10 +66,17 @@ const Page = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setReport("")
     setDiscoveredUrls([])
     setLoading(true)
-    setHasInteracted(true)
+    setActiveAgent(0)
+
+    // Add user message immediately
+    const userMessage: Message = {
+      role: 'user',
+      content: query,
+      timestamp: new Date().toISOString()
+    }
+    setMessages(prev => [...prev, userMessage])
 
     try {
       const response = await fetch("/api/research", {
@@ -82,7 +85,8 @@ const Page = () => {
         body: JSON.stringify({
           query,
           urls: [],
-          max_iterations: 1
+          max_iterations: 1,
+          skipInitialDelay: true // New flag to skip initial delay
         })
       });
 
@@ -104,18 +108,21 @@ const Page = () => {
           try {
             const data = JSON.parse(line.replace(/^data: /, ''));
             
-            // Handle session creation success
             if (data.sessionId) {
               window.location.href = `/research/${data.sessionId}`;
               return;
             }
 
-            // Handle different types of updates
-            if (data.report) {
-              setReport(data.report);
+            if (data.agent_status?.researcher === "working") {
+              setActiveAgent(0);
+            } else if (data.agent_status?.writer === "working") {
+              setActiveAgent(1);
+            } else if (data.report) {
+              setActiveAgent(2);
             }
+
             if (data.visited_urls) {
-              setDiscoveredUrls(prev => [...new Set([...prev, ...data.visited_urls])]);
+              setDiscoveredUrls((prev: string[]) => [...new Set([...prev, ...data.visited_urls])])
             }
             if (data.error) {
               throw new Error(data.error);
@@ -131,6 +138,7 @@ const Page = () => {
       alert("Failed to start research session: " + (error as Error).message)
     } finally {
       setLoading(false)
+      setActiveAgent(-1)
     }
   }
 
@@ -147,42 +155,21 @@ const Page = () => {
         />
         
         <main className="mb-4">
-          {!hasInteracted ? (
-            <div className="flex-1 flex flex-col items-center justify-center w-full">
-              <motion.h2
-                className="text-4xl font-light tracking-tight mb-8 text-center"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-              >
-                What would you like to research?
-              </motion.h2>
-              <SearchForm
-                query={query}
-                setQuery={setQuery}
-                loading={loading}
-                onSubmit={handleSubmit}
-                className="w-full max-w-2xl relative"
-              />
-            </div>
-          ) : (
-            <>
-              <div className="flex-1 overflow-y-auto mb-4 scroll-smooth space-y-4">
-                <div className="prose prose-invert max-w-none break-words">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
-                </div>
-              </div>
-              <SearchForm
-                query={query}
-                setQuery={setQuery}
-                loading={loading}
-                onSubmit={handleSubmit}
-                placeholder="Ask a follow-up question..."
-                className="sticky bottom-0 bg-[hsl(var(--background))] pt-4 relative"
-              />
-            </>
-          )}
+          <ChatWindow messages={messages} />
+          <SearchForm
+            query={query}
+            setQuery={setQuery}
+            loading={loading}
+            onSubmit={handleSubmit}
+            placeholder={messages.length > 0 ? "Ask a follow-up question..." : "What would you like to research?"}
+            className="sticky bottom-0 bg-[hsl(var(--background))] pt-4"
+          />
         </main>
+        {loading && (
+          <div className="mb-8">
+            <AgentAnimation activeAgent={activeAgent} />
+          </div>
+        )}
       </div>
     </div>
   )

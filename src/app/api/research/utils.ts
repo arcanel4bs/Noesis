@@ -1,10 +1,11 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatGroq } from "@langchain/groq";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import type { AgentState } from "@/app/types/agents";
 import { updateResearchSessionMessages, updateResearchSessionFinalReport } from "@/backend/db";
+import { SupabaseClientType } from "@/app/types/index";
 
 export function createSSEHeaders(): Record<string, string> {
   return {
@@ -23,7 +24,7 @@ export const sendEvent = (writer: WritableStreamDefaultWriter<Uint8Array>, data:
 export const researchNode = async (
   state: AgentState,
   writer: WritableStreamDefaultWriter<Uint8Array>,
-  supabaseClient: any
+  supabaseClient: SupabaseClientType
 ): Promise<AgentState> => {
   sendEvent(writer, {
     agent_status: { researcher: "working" },
@@ -55,7 +56,8 @@ Perform a focused web search to answer this follow-up question. Return the resul
     try {
       const jsonString = (modelResponse.content as string).replace(/```json\n?([\s\S]*?)\n?```/g, "$1");
       searchData = JSON.parse(jsonString);
-    } catch (error) {
+    } catch (parseError) {
+      console.error("Error parsing JSON:", parseError);
       searchData = { results: [], visited_urls: [] };
     }
     const searchResults = JSON.stringify(searchData.results);
@@ -74,9 +76,19 @@ Perform a focused web search to answer this follow-up question. Return the resul
       iteration_count: state.iteration_count + 1,
     };
     
-    await sendEvent(writer, { agent_status: { researcher: "idle" } });
-    await updateResearchSessionMessages(state.userId, state.sessionId, updatedState.messages, supabaseClient);
-    return updatedState;
+    try {
+      await sendEvent(writer, { agent_status: { researcher: "idle" } });
+      await updateResearchSessionMessages(
+        state.userId, 
+        state.sessionId, 
+        updatedState.messages, 
+        supabaseClient
+      );
+      return updatedState;
+    } catch (dbError) {
+      console.error("Database operation failed:", dbError);
+      return updatedState;
+    }
   } catch (error: unknown) {
     await sendEvent(writer, {
       agent_status: { researcher: "error" },
@@ -94,7 +106,7 @@ Perform a focused web search to answer this follow-up question. Return the resul
 export const writerNode = async (
   state: AgentState,
   writer: WritableStreamDefaultWriter<Uint8Array>,
-  supabaseClient: any
+  supabaseClient: SupabaseClientType
 ): Promise<AgentState> => {
   sendEvent(writer, {
     agent_status: { writer: "working" },
@@ -151,7 +163,7 @@ export const refinementNode = async (
   state: AgentState,
   writer: WritableStreamDefaultWriter<Uint8Array>,
   req: NextRequest,
-  supabaseClient: any
+  supabaseClient: SupabaseClientType
 ): Promise<AgentState> => {
   sendEvent(writer, { status: "Refining report" });
   try {

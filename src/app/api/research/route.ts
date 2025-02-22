@@ -2,8 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { supabaseServerClient } from "@/backend/supabaseServerClient";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatGroq } from "@langchain/groq";
-
-import { BaseMessage, AIMessage, HumanMessage } from "@langchain/core/messages";
+import { AIMessage, HumanMessage, BaseMessage } from "@langchain/core/messages";
 import { auth } from "@clerk/nextjs/server";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import {
@@ -13,6 +12,8 @@ import {
   updateResearchSessionFinalReport,
 } from "@/backend/db";
 import type { AgentState } from "@/app/types/agents";
+import type { SupabaseClientType } from "@/app/types/index";
+import { createCustomMessage } from "@/app/api/research/helper";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +38,7 @@ const sendEvent = (writer: WritableStreamDefaultWriter<Uint8Array>, data: unknow
 async function researchNode(
   state: AgentState,
   writer: WritableStreamDefaultWriter<Uint8Array>,
-  supabaseClient: any
+  supabaseClient: SupabaseClientType
 ): Promise<AgentState> {
   sendEvent(writer, {
     agent_status: { researcher: "working" },
@@ -59,7 +60,8 @@ async function researchNode(
     try {
       const jsonString = (modelResponse.content as string).replace(/```json\n?([\s\S]*?)\n?```/g, "$1");
       searchData = JSON.parse(jsonString);
-    } catch (error) {
+    } catch (parseError) {
+      console.error("Error parsing JSON:", parseError);
       searchData = { results: [], visited_urls: [] };
     }
     const searchResults = JSON.stringify(searchData.results);
@@ -99,7 +101,7 @@ async function researchNode(
 async function writerNode(
   state: AgentState,
   writer: WritableStreamDefaultWriter<Uint8Array>,
-  supabaseClient: any
+  supabaseClient: SupabaseClientType
 ): Promise<AgentState> {
   sendEvent(writer, {
     agent_status: { writer: "working" },
@@ -165,7 +167,7 @@ async function refinementNode(
   state: AgentState,
   writer: WritableStreamDefaultWriter<Uint8Array>,
   req: NextRequest,
-  supabaseClient: any
+  supabaseClient: SupabaseClientType
 ): Promise<AgentState> {
   sendEvent(writer, { status: "Refining report" });
   try {
@@ -243,49 +245,31 @@ Final Report:`
 }
 
 export async function POST(req: NextRequest) {
+  const transformStream = new TransformStream();
+  const writer = transformStream.writable.getWriter();
+
   try {
-    // 1. Authentication check using Clerk
+    // Authentication and request processing
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-  
-    // 2. Parse request body
-    const { query, urls, max_iterations, sessionId } = await req.json();
-    if (!query) {
-      return NextResponse.json({ error: "Query is required." }, { status: 400 });
-    }
-  
-    // 3. Set up the SSE stream
-    const transformStream = new TransformStream();
-    const writer = transformStream.writable.getWriter();
-    const _sendEvent = (data: unknown) => {
-      writer.write(new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`));
-    };
-  
-    // 4. Use the server client (with service role key) instead of a ClerkSupabaseClient.
-    const supabaseClient = supabaseServerClient;
-  
-    // 5. Load or create research session
+
+    const { query, sessionId, max_iterations = 3 } = await req.json();
     let session;
+
     try {
       if (sessionId) {
-        session = await getResearchSession(userId, sessionId, supabaseClient);
+        session = await getResearchSession(userId, sessionId, supabaseServerClient);
         if (!session) {
-          console.log("Session not found, creating new session");
-          session = await createResearchSession(userId, query, supabaseClient);
+          session = await createResearchSession(userId, query, supabaseServerClient);
         }
       } else {
-        console.log("Creating new session");
-        session = await createResearchSession(userId, query, supabaseClient);
+        session = await createResearchSession(userId, query, supabaseServerClient);
       }
       
       if (!session) {
-        const error = "Failed to create or load research session.";
-        console.error(error);
-        sendEvent(writer, { error });
-        writer.close();
-        return new NextResponse(transformStream.readable, { headers: createSSEHeaders() });
+        throw new Error("Failed to create or load research session.");
       }
 
       // Send immediate confirmation of session creation
@@ -293,7 +277,7 @@ export async function POST(req: NextRequest) {
         status: "success",
         sessionId: session.id 
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Session creation error:", error);
       sendEvent(writer, { 
         error: "Session creation failed",
@@ -303,54 +287,58 @@ export async function POST(req: NextRequest) {
       return new NextResponse(transformStream.readable, { headers: createSSEHeaders() });
     }
     
-    // 6. Append the new user prompt to the conversation memory
+    // Append the new user prompt to the conversation memory
     const updatedMessages = [
       ...(session.messages || []),
-      { role: "human", content: query, timestamp: new Date().toISOString() }
+      createCustomMessage('human', query)
     ];
-    await updateResearchSessionMessages(userId, session.id, updatedMessages, supabaseClient);
+    await updateResearchSessionMessages(userId, session.id, updatedMessages, supabaseServerClient);
   
-    // 7. Create initial AgentState using the conversation memory
+    // Create conversation history string for AI context
+    const conversationHistory = session?.messages
+      ?.map(msg => `${msg._getType()}: ${msg.content}`)
+      .join('\n') || '';
+
+    // Create initial AgentState using the conversation memory
     let state: AgentState = {
       userId,
       query,
-      urls: urls || [],
+      urls: [],
       max_iterations,
       iteration_count: 0,
       agent_status: { researcher: "idle", writer: "idle" },
       timeline_events: [],
-      messages: updatedMessages,
+      messages: updatedMessages as BaseMessage[],
       search_results: "",
       visited_urls: [],
       report_draft: "",
       sessionId: session.id,
-      previous_report: session.final_report,
-      conversation_history: updatedMessages.map(msg => 
-        `${msg.role === 'human' ? 'User' : 'Assistant'}: ${msg.content}`
-      ).join('\n')
+      conversation_history: conversationHistory,
+      previous_report: session?.final_report || null,
+      final_report: null
     };
   
-    // 8. Run the research, writer, and refinement flows
-    state = await researchNode(state, writer, supabaseClient);
+    // Run the research, writer, and refinement flows
+    state = await researchNode(state, writer, supabaseServerClient);
     if (state.agent_status.researcher === "error") {
-      _sendEvent({ error: "Research step failed." });
+      sendEvent(writer, { error: "Research step failed." });
       writer.close();
       return new NextResponse(transformStream.readable, { headers: createSSEHeaders() });
     }
-    state = await writerNode(state, writer, supabaseClient);
+    state = await writerNode(state, writer, supabaseServerClient);
     if (state.agent_status.writer === "error") {
-      _sendEvent({ error: "Writer step failed." });
+      sendEvent(writer, { error: "Writer step failed." });
       writer.close();
       return new NextResponse(transformStream.readable, { headers: createSSEHeaders() });
     }
-    state = await refinementNode(state, writer, req, supabaseClient);
+    state = await refinementNode(state, writer, req, supabaseServerClient);
   
-    // 9. Close the writer and return the SSE stream
+    // Close the writer and return the stream
     writer.close();
     return new NextResponse(transformStream.readable, { headers: createSSEHeaders() });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: "An API error occurred", details: error.message },
+      { error: "An API error occurred", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
