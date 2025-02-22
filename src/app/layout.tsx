@@ -1,11 +1,18 @@
+import type { Metadata } from 'next';
 import { Space_Grotesk } from "next/font/google"
+import { ClerkProvider } from '@clerk/nextjs'
 import "./globals.css"
-import type React from "react" // Import React
+import AuthHeader from '@/components/auth-header'
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   display: "swap",
 })
+
+export const metadata: Metadata = {
+  title: 'My App',
+  description: 'Next.js with Clerk and Supabase',
+};
 
 export default function RootLayout({
   children,
@@ -13,11 +20,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <head>
-        <title>Noesis | Research Agent Assistant</title>
-      </head>
-      <body className={spaceGrotesk.className}>{children}</body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body className={spaceGrotesk.className}>
+          <AuthHeader />
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

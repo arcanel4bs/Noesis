@@ -1,14 +1,30 @@
 import { createClient } from '@supabase/supabase-js'
+import { getAuth } from '@clerk/nextjs/server'
+import { NextRequest } from 'next/server'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-if (!supabaseUrl) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL environment variable is not set.')
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
 }
 
-if (!supabaseAnonKey) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable is not set.')
+export async function createClerkSupabaseClient(req: NextRequest) {
+  const { getToken } = getAuth(req)
+  
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      fetch: async (url, options = {}) => {
+        const clerkToken = await getToken({ template: 'supabase' })
+        const headers = new Headers(options?.headers)
+        if (clerkToken) {
+          headers.set('Authorization', `Bearer ${clerkToken}`)
+        }
+        return fetch(url, { ...options, headers })
+      },
+    },
+  })
 }
 
+// Export default client for non-authenticated operations
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)

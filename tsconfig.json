@@ -20,8 +20,9 @@
     ],
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "types": ["node", "offscreencanvas", "phoenix"]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/api/start-research"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/api/start-research", "src/app/api/trial-start-research"],
   "exclude": ["node_modules"]
 }
