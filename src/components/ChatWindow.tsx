@@ -19,8 +19,8 @@ export const ChatWindow = ({ messages }: ChatWindowProps) => {
           <div
             className={`max-w-[80%] rounded-lg p-4 ${
               message.role === "user"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-black"
+                ? "bg-[hsl(var(--card))] text-[hsl(var(--foreground))]"
+                : "bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
             }`}
           >
             <div className="prose max-w-none">
