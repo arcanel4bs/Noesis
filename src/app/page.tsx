@@ -7,7 +7,7 @@ import SourcesButton from "@/components/SourcesButton"
 import { AgentAnimation } from "@/components/agent-animation"
 import { ChatWindow } from "@/components/ChatWindow"
 import { Message } from "@/app/types/chat"
-import LeftSideBar from "@/components/LeftSideBar"
+import LeftSideBar from "@/components/leftSideBar"
 
 const Page = () => {
   const [messages, setMessages] = useState<Message[]>([])

@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SearchForm from '@/components/SearchForm';
 import SourcesButton from '@/components/SourcesButton';
-import LeftSideBar from '@/components/LeftSideBar';
+import LeftSideBar from '@/components/leftSideBar';
 import { AgentStatus } from "@/app/types/agents";
 
 export default function ResearchPage() {
