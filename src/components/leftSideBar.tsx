@@ -10,7 +10,7 @@ interface Conversation {
 }
 
 const LeftSideBar: React.FC = () => {
-  const [isOpen, setIsOpen] = useState<boolean>(true);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const router = useRouter();
 
