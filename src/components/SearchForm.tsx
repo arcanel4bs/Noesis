@@ -26,9 +26,9 @@ const SearchForm = ({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           disabled={loading}
-          className="w-full bg-[hsl(var(--card))] text-[hsl(var(--foreground))] placeholder-gray-500 rounded-lg pl-10 pr-20 py-3 focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] border border-[hsl(var(--border))]"
+          className="w-full bg-[hsl(var(--card))] text-[hsl(var(--foreground))] placeholder-gray-500 rounded-lg pl-4 md:pl-10 pr-16 py-2 md:py-3 text-sm md:text-base focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] border border-[hsl(var(--border))]"
         />
-        <div className="absolute right-2 flex gap-2">
+        <div className="absolute right-2 flex gap-1 md:gap-2">
           <button
             type="button"
             onClick={() => setQuery("")}

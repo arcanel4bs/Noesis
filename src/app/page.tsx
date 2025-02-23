@@ -149,15 +149,18 @@ const Page = () => {
       animate={{ opacity: 1 }}
       className="min-h-screen relative bg-[hsl(var(--background))] flex flex-col items-center"
     >
-      <div className="absolute left-0 top-0 h-full">
+      {/* Hide sidebar on mobile */}
+      <div className="absolute left-0 top-0 h-full hidden md:block">
         <LeftSideBar />
       </div>
-      <div className="max-w-3xl w-full px-4 py-8">
-        <SourcesButton 
-          showSources={showSources}
-          setShowSources={setShowSources}
-          discoveredUrls={discoveredUrls}
-        />
+      <div className="w-full max-w-3xl px-4 py-4 md:py-8 md:px-8">
+        <div className="relative">
+          <SourcesButton 
+            showSources={showSources}
+            setShowSources={setShowSources}
+            discoveredUrls={discoveredUrls}
+          />
+        </div>
         
         <main className="mb-4">
           <AnimatePresence>
@@ -169,7 +172,7 @@ const Page = () => {
             setQuery={setQuery}
             loading={loading}
             onSubmit={handleSubmit}
-            placeholder={messages.length > 0 ? "Ask a follow-up question..." : "What would you like to research?"}
+            placeholder={messages.length > 0 ? "Ask a follow-up..." : "What would you like to research?"}
             className="sticky bottom-0 bg-[hsl(var(--background))] pt-4"
           />
         </main>
@@ -178,7 +181,7 @@ const Page = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="mb-8"
+            className="mb-4 md:mb-8"
           >
             <AgentAnimation activeAgent={activeAgent} />
           </motion.div>

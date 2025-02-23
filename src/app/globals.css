@@ -155,3 +155,28 @@ body {
   line-height: 1.75rem;
 }
 
+@media (max-width: 768px) {
+  .prose {
+    font-size: 0.875rem;
+  }
+  
+  .prose h1 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  
+  .prose h2 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+  
+  .prose h3 {
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+  }
+  
+  .connecting-line {
+    width: 60px;
+  }
+}
+
