@@ -32,7 +32,7 @@ export const ProcessVisualizer = ({ agentStatus, className }: ProcessVisualizerP
   return (
     <div className={`fixed right-4 top-24 w-64 space-y-4 ${className}`}>
       <AnimatePresence>
-        {stages.map((stage, index) => {
+        {stages.map((stage) => {
           const isActive = agentStatus[stage.id as keyof AgentStatus] === 'working';
           const isDone = agentStatus[stage.id as keyof AgentStatus] === 'idle';
           

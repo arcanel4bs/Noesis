@@ -7,6 +7,12 @@ import type { AgentState } from "@/app/types/agents";
 import { updateResearchSessionMessages, updateResearchSessionFinalReport } from "@/backend/db";
 import { SupabaseClientType } from "@/app/types/index";
 
+interface SearchResult {
+  title: string;
+  url: string;
+  content: string;
+}
+
 export function createSSEHeaders(): Record<string, string> {
   return {
     "Content-Type": "text/event-stream",
@@ -62,7 +68,7 @@ Perform a focused web search to answer this follow-up question. Return the resul
     }
     const searchResults = JSON.stringify(searchData.results);
     const visitedUrls = searchData.visited_urls || [];
-    const extractedUrls = searchData.results.map((result: any) => result.url);
+    const extractedUrls = searchData.results.map((result: SearchResult) => result.url);
     
     const updatedState: AgentState = {
       ...state,
