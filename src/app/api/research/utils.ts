@@ -62,6 +62,7 @@ Perform a focused web search to answer this follow-up question. Return the resul
     }
     const searchResults = JSON.stringify(searchData.results);
     const visitedUrls = searchData.visited_urls || [];
+    const extractedUrls = searchData.results.map((result: any) => result.url);
     
     const updatedState: AgentState = {
       ...state,
@@ -69,6 +70,7 @@ Perform a focused web search to answer this follow-up question. Return the resul
       timeline_events: [{ type: "agent_end", agent: "researcher", timestamp: new Date() }],
       search_results: searchResults,
       visited_urls: visitedUrls,
+      urls: extractedUrls,
       messages: [
         ...state.messages,
         new HumanMessage({ content: `Search results: ${searchResults}` })
@@ -76,6 +78,11 @@ Perform a focused web search to answer this follow-up question. Return the resul
       iteration_count: state.iteration_count + 1,
     };
     
+    await supabaseClient
+      .from('research_sessions')
+      .update({ urls: extractedUrls })
+      .eq('id', state.sessionId);
+
     try {
       await sendEvent(writer, { agent_status: { researcher: "idle" } });
       await updateResearchSessionMessages(

@@ -1,56 +1,105 @@
 import { motion } from "framer-motion";
+import { FiSearch, FiCpu, FiFileText } from 'react-icons/fi';
+import { useState, useEffect } from 'react';
 
-const exampleQueries = [
-  "quantum technology and its future applications",
-  "latest developments in space exploration",
-  "advancements in brain-computer interfaces",
-  "cutting-edge racing car technologies",
-  "artificial intelligence in healthcare",
-  "sustainable energy innovations"
+const stages = [
+  {
+    icon: FiSearch,
+    title: "Comprehensive Web Search",
+    description: "We start by casting a wide net, gathering information from diverse and reliable sources across the web. This ensures we have a broad foundation of data.",
+  },
+  {
+    icon: FiCpu,
+    title: "Intelligent Analysis",
+    description: "Our AI then steps in to sift through the information, identifying key facts, connections, and insights that might be missed by a human researcher.",
+  },
+  {
+    icon: FiFileText,
+    title: "Clear, Concise Report",
+    description: "Finally, we synthesize all the findings into a well-structured, easy-to-understand report, saving you time and effort.",
+  }
 ];
 
 const WelcomeCard = () => {
+  const [activeStage, setActiveStage] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveStage((prevStage) => (prevStage + 1) % stages.length);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.5 }}
-      className="bg-[hsl(var(--card))] rounded-lg p-4 md:p-6 mb-4 md:mb-8 border border-[hsl(var(--border))]"
+      className="max-w-2xl mx-auto p-6 bg-[hsl(var(--card))] rounded-xl shadow-xl"
     >
-      <motion.h1
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="text-xl md:text-2xl font-semibold mb-3 md:mb-4"
-      >
-        Welcome to Noesis: A Web Reasoning Agent
-      </motion.h1>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="text-sm md:text-base text-[hsl(var(--foreground))] mb-3 md:mb-4"
-      >
-        Ask me anything about current developments, research, or technologies. Here are some examples:
-      </motion.p>
+      <h1 className="text-2xl font-light mb-6">Welcome to NOESIS</h1>
+
+      <p className="text-lg mb-8 text-gray-300">
+        Your AI-powered research companion that transforms complex queries into comprehensive insights.
+      </p>
+
+      <div className="flex space-x-6">
+        {/* Status Bar Container */}
+        <div className="w-2 rounded-full bg-gray-700/50 relative">
+          {/* Animated Progress Bar */}
+          <motion.div
+            className="h-full bg-[hsl(var(--primary))] rounded-full"
+            style={{
+              width: `${(activeStage + 1) * (100 / stages.length)}%`, // Calculate width based on activeStage
+            }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+          />
+        </div>
+
+        {/* Stage Descriptions */}
+        <div className="flex-1">
+          {stages.map((stage, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{
+                opacity: activeStage === index ? 1 : 0.6,
+                x: 0,
+                color: activeStage === index ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))",
+              }}
+              transition={{
+                duration: 0.5,
+              }}
+              className={`
+                p-4 rounded-lg mb-4
+                transition-all duration-300
+              `}
+            >
+              <div className="flex items-start gap-4">
+                <div className="mt-1">
+                  <stage.icon size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium mb-1">
+                    {stage.title}
+                  </h3>
+                  <p className="text-sm">
+                    {stage.description}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-3"
+        transition={{ delay: 0.8 }}
+        className="mt-8 text-sm text-gray-400 text-center"
       >
-        {exampleQueries.map((query, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 + index * 0.1 }}
-            className="bg-[hsl(var(--background))] p-2 md:p-3 rounded-md text-xs md:text-sm cursor-pointer hover:bg-[hsl(var(--border))] transition-colors"
-          >
-            {query}
-          </motion.div>
-        ))}
+        Enter your research query above to begin
       </motion.div>
     </motion.div>
   );

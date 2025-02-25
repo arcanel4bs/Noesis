@@ -9,6 +9,7 @@ import SearchForm from '@/components/SearchForm';
 import SourcesButton from '@/components/SourcesButton';
 import LeftSideBar from '@/components/leftSideBar';
 import { AgentStatus } from "@/app/types/agents";
+import { motion } from 'framer-motion';
 
 export default function ResearchPage() {
   const params = useParams();
@@ -17,6 +18,7 @@ export default function ResearchPage() {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [showSources, setShowSources] = useState(false);
+  const [urls, setUrls] = useState<string[]>([]);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>({
     researcher: "idle",
     writer: "idle"
@@ -35,6 +37,7 @@ export default function ResearchPage() {
       if (response.ok) {
         const data = await response.json();
         setSession(data);
+        setUrls(data.urls || []);
         setQuery(""); // Reset query for follow-up questions
       }
     } catch (error) {
@@ -101,6 +104,7 @@ export default function ResearchPage() {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+      fetchSession(sessionId);
     }
   };
 
@@ -120,8 +124,37 @@ export default function ResearchPage() {
           setShowSources={setShowSources}
         />
         
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="mb-6"
+        >
+          <h1 className="text-2xl md:text-3xl font-light mb-4">
+            {session.query}
+          </h1>
+          {urls.length > 0 && (
+            <div className="bg-[hsl(var(--card))] rounded-lg p-4 mb-6">
+              <h2 className="text-lg font-medium mb-2">Sources</h2>
+              <ul className="space-y-2">
+                {urls.map((url, index) => (
+                  <li key={index}>
+                    <a 
+                      href={url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      {url}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </motion.div>
+        
         <main className="mb-4">
-          <h1 className="text-2xl font-semibold mb-4">{session.query}</h1>
           <div className="prose prose-invert max-w-none break-words mb-8">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {session.final_report || ''}
